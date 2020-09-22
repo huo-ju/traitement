@@ -34,8 +34,6 @@ func (q *Queue) Consume() (<-chan amqp.Delivery, error) {
 
 //Retry the job task
 func  (q *Queue) Retry(d *amqp.Delivery) {
-    fmt.Println(d)
-
     QueueName := "mailman."+q.Name+".created"
 
     if d.Exchange == "nanit."+q.Name {
@@ -56,7 +54,7 @@ func  (q *Queue) Retry(d *amqp.Delivery) {
 
     if retryCount < q.MaxRetries  { //retrycount 3
         retryDelay := q.BaseRetryDelay * (retryCount + 1)
-        err := q.AmqpChannel.Publish("nanit.users.retry1", QueueName, false, false, amqp.Publishing{
+        err := q.AmqpChannel.Publish("nanit."+q.Name+".retry1", QueueName, false, false, amqp.Publishing{
 		    DeliveryMode: amqp.Persistent,
             Expiration: strconv.Itoa(retryDelay),
             Headers: amqp.Table{"x-retries" : retryCount + 1},
@@ -143,6 +141,6 @@ func Init (connectstr string, name string, baseRetryDelay int, maxRetries int) (
     if err !=nil {
         return nil, err
     }
-    queue := &Queue{AmqpChannel: amqpChannel, Conn:conn, Name: name, }
+    queue := &Queue{AmqpChannel: amqpChannel, Conn:conn, Name: name, BaseRetryDelay: baseRetryDelay, MaxRetries: maxRetries}
     return queue, nil
 }
