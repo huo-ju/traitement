@@ -1,0 +1,5 @@
+AMQP_URL = "amqp://"
+PG_URL = "postgres://"
+QUEUE_NAME = "aqueuename"
+BASE_RETRY_DELAY = 3000
+MAX_RETRIES = 5

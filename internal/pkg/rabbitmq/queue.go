@@ -3,7 +3,7 @@ package rabbitmq
 import (
     "fmt"
     //"os"
-	//"strconv"
+	"strconv"
 	//"flag"
     //"encoding/json"
     //"math/rand"
@@ -12,26 +12,78 @@ import (
     "github.com/streadway/amqp"
 )
 
-
+// Queue wrapping the amqp Channel operation and manage the connection.
 type Queue struct {
     AmqpChannel *amqp.Channel
     Conn *amqp.Connection
     Name string
-
+    BaseRetryDelay int
+    MaxRetries int
 }
 
-
+// Close the channel and connection
 func (q *Queue) Close() {
 	q.AmqpChannel.Close()
     q.Conn.Close()
 }
 
+// Consume wrapping the mailman.created queue consume 
 func (q *Queue) Consume() (<-chan amqp.Delivery, error) {
-    fmt.Println(q.AmqpChannel)
     return q.AmqpChannel.Consume("mailman."+q.Name+".created", "",false, false, false,false, nil)
 }
 
-func Init (connectstr string, name string) (*Queue, error)  {
+//Retry the job task
+func  (q *Queue) Retry(d *amqp.Delivery) {
+    fmt.Println(d)
+
+    QueueName := "mailman."+q.Name+".created"
+
+    if d.Exchange == "nanit."+q.Name {
+        QueueName = "mailman."+q.Name+".created"
+    } else if d.Exchange == "nanit."+q.Name+".retry1" {
+        QueueName = "nanit."+q.Name+".wait_queue"
+    } else if d.Exchange == "nanit."+q.Name+".retry2" {
+        QueueName = "mailman."+q.Name+".created"
+    }
+
+    retryCount := 0
+    if d.Headers["x-retries"] != nil {
+        xretries, err := strconv.Atoi(fmt.Sprintf("%v", d.Headers["x-retries"]) )
+        if err == nil {
+            retryCount = xretries
+        }
+    }
+
+    if retryCount < q.MaxRetries  { //retrycount 3
+        retryDelay := q.BaseRetryDelay * (retryCount + 1)
+        err := q.AmqpChannel.Publish("nanit.users.retry1", QueueName, false, false, amqp.Publishing{
+		    DeliveryMode: amqp.Persistent,
+            Expiration: strconv.Itoa(retryDelay),
+            Headers: amqp.Table{"x-retries" : retryCount + 1},
+		    ContentType:  "text/plain",
+		    Body:         d.Body,
+		})
+        if err ==nil {
+            d.Ack(false)
+        }
+    }else {
+        //no more retry
+        //ack the task
+        err := q.AmqpChannel.Publish("", "mailman."+q.Name+".rejected", false, false, amqp.Publishing{
+		    DeliveryMode: amqp.Persistent,
+            Headers: amqp.Table{"x-retries" : retryCount + 1},
+		    ContentType:  "text/plain",
+		    Body:         d.Body,
+		})
+        if err ==nil {
+            d.Ack(false)
+        }
+
+    }
+}
+
+// Init the Queue and return a Queue instance
+func Init (connectstr string, name string, baseRetryDelay int, maxRetries int) (*Queue, error)  {
     conn, err := amqp.Dial(connectstr)
     if err !=nil {
         return nil, err
