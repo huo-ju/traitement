@@ -3,10 +3,14 @@ package main
 import (
 	"flag"
     "fmt"
-    "log"
+    "github.com/labstack/gommon/log"
 	"path/filepath"
 	"github.com/spf13/viper"
-	"git.a.jhuo.ca/huoju/traitement/internal/pkg/rabbitmq"
+	"github.com/labstack/echo/v4"
+    "github.com/labstack/echo/v4/middleware"
+	"git.a.jhuo.ca/huoju/traitement/pkg/rabbitmq"
+	"git.a.jhuo.ca/huoju/traitement/internal/pkg/database"
+	//"git.a.jhuo.ca/huoju/traitement/pkg/types"
 )
 
 
@@ -16,6 +20,7 @@ var (
     queueName string
     baseRetryDelay int
     maxRetries int
+    jwtSecret   string
 )
 
 func loadconf() {
@@ -26,28 +31,60 @@ func loadconf() {
 	viper.ReadInConfig()
 	pgURL = viper.GetString("PG_URL")
 	amqpURL = viper.GetString("AMQP_URL")
+	jwtSecret = viper.GetString("JWT_SECRET")
 	queueName = viper.GetString("QUEUE_NAME")
 	baseRetryDelay = viper.GetInt("BASE_RETRY_DELAY")
 	maxRetries = viper.GetInt("MAX_RETRIES")
 }
+
+func StartServer(jwtSecret string ) {
+	e := echo.New()
+    e.Use(middleware.Logger())
+    e.Logger.SetLevel(log.DEBUG)
+    r := e.Group("/api")
+	r.Use(middleware.JWT([]byte(jwtSecret)))
+    //r.POST("/save", api.Save)
+	e.Logger.Fatal(e.Start(":1323"))
+}
+
 func main() {
 	flag.Parse()
 	loadconf()
-    amqpQueue, err := rabbitmq.Init(amqpURL, queueName, baseRetryDelay, maxRetries)
-    fmt.Println(amqpQueue)
+    fmt.Println(database.DBConn)
+	db, err := database.New(pgURL)
+    fmt.Println("dbconn:")
+    fmt.Println(db)
+
+    r,err := db.AddURLTask("https://google.com")
+    fmt.Println(r)
     fmt.Println(err)
 
-    messageChannel, err := amqpQueue.Consume()
 
+    amqpQueue, err := rabbitmq.Init(amqpURL, queueName, baseRetryDelay, maxRetries)
+    //messageChannel, err := amqpQueue.Consume()
     defer amqpQueue.Close()
     fmt.Println(err)
     //handleError(err, "Can't register consumer")
-    stopChan := make(chan bool)
-    go func(){
-        for d := range messageChannel {
-            log.Printf("Received a message: %s",d.Body)
-            amqpQueue.Retry(&d)
-        }
-    }()
-    <-stopChan
+    //stopChan := make(chan bool)
+    //go func(){
+    //    for d := range messageChannel {
+    //        log.Printf("Received a message: %s",d.Body)
+    //        amqpQueue.Retry(&d)
+    //    }
+    //}()
+
+    //amqpQueueStorage, err := rabbitmq.Init(amqpURL, "storage", baseRetryDelay, maxRetries)
+    //messageChannelStorage, err := amqpQueueStorage.Consume()
+    //defer amqpQueueStorage.Close()
+
+    //go func(){
+    //    for d := range messageChannelStorage{
+    //        log.Printf("Received a storage message: %s",d.Body)
+    //        amqpQueueStorage.Retry(&d)
+    //    }
+    //}()
+
+    //<-stopChan
+
+    StartServer(jwtSecret)
 }
