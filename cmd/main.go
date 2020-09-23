@@ -9,6 +9,7 @@ import (
 	"github.com/labstack/echo/v4"
     "github.com/labstack/echo/v4/middleware"
 	"git.a.jhuo.ca/huoju/traitement/pkg/rabbitmq"
+	"git.a.jhuo.ca/huoju/traitement/api"
 	"git.a.jhuo.ca/huoju/traitement/internal/pkg/database"
 	//"git.a.jhuo.ca/huoju/traitement/pkg/types"
 )
@@ -43,7 +44,7 @@ func StartServer(jwtSecret string ) {
     e.Logger.SetLevel(log.DEBUG)
     r := e.Group("/api")
 	r.Use(middleware.JWT([]byte(jwtSecret)))
-    //r.POST("/save", api.Save)
+    r.POST("/addurl", api.AddUrl)
 	e.Logger.Fatal(e.Start(":1323"))
 }
 
@@ -51,13 +52,14 @@ func main() {
 	flag.Parse()
 	loadconf()
     fmt.Println(database.DBConn)
-	db, err := database.New(pgURL)
+    var err error
+	database.DBConn, err = database.New(pgURL)
     fmt.Println("dbconn:")
-    fmt.Println(db)
+    fmt.Println(database.DBConn)
 
-    r,err := db.AddURLTask("https://google.com")
-    fmt.Println(r)
-    fmt.Println(err)
+    //r,err := db.AddURLTask("https://google.com")
+    //fmt.Println(r)
+    //fmt.Println(err)
 
 
     amqpQueue, err := rabbitmq.Init(amqpURL, queueName, baseRetryDelay, maxRetries)

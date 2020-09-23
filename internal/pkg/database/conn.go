@@ -7,9 +7,7 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-var (
-   DBConn *Db
-)
+var DBConn *Db
 
 type Db struct {
 	pool *pgxpool.Pool
