@@ -24,6 +24,8 @@ var (
     jwtSecret   string
 )
 
+var amqpQueue *rabbitmq.Queue
+
 func loadconf() {
 	viper.AddConfigPath(filepath.Dir("./configs/"))
 	viper.AddConfigPath(filepath.Dir("."))
@@ -44,7 +46,7 @@ func StartServer(jwtSecret string ) {
     e.Logger.SetLevel(log.DEBUG)
     r := e.Group("/api")
 	r.Use(middleware.JWT([]byte(jwtSecret)))
-    r.POST("/addurl", api.AddUrl)
+    r.POST("/addurl", api.AddUrl(amqpQueue))
 	e.Logger.Fatal(e.Start(":1323"))
 }
 
@@ -61,9 +63,8 @@ func main() {
     //fmt.Println(r)
     //fmt.Println(err)
 
-
-    amqpQueue, err := rabbitmq.Init(amqpURL, queueName, baseRetryDelay, maxRetries)
-    //messageChannel, err := amqpQueue.Consume()
+    amqpQueue, err = rabbitmq.Init(amqpURL, queueName, baseRetryDelay, maxRetries)
+    //messageChannel, err := amqpQueue.Consume(10) //TODO: Qos count add to config file
     defer amqpQueue.Close()
     fmt.Println(err)
     //handleError(err, "Can't register consumer")

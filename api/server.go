@@ -5,31 +5,46 @@ import (
 	"net/http"
 	"github.com/labstack/echo/v4"
     jwt "github.com/dgrijalva/jwt-go"
+	"git.a.jhuo.ca/huoju/traitement/pkg/rabbitmq"
     "git.a.jhuo.ca/huoju/traitement/pkg/types"
+	"git.a.jhuo.ca/huoju/traitement/internal/pkg/task"
 )
 
 
-func AddUrl(c echo.Context) (err error) {
-    c.Echo().Logger.Info("AddUrl")
-    user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(jwt.MapClaims)
-	name := claims["name"].(string)
 
-    c.Echo().Logger.Info("api save by user ", name)
+func AddUrl(amqpQueue *rabbitmq.Queue) echo.HandlerFunc {
+    // ... but it returns a echo handler
+    return func(c echo.Context) error {
+		c.Echo().Logger.Info("AddUrl")
+		user := c.Get("user").(*jwt.Token)
+		claims := user.Claims.(jwt.MapClaims)
+		name := claims["name"].(string)
+
+		c.Echo().Logger.Info("api save by user ", name)
 
 
-    var urlMetaList []types.UrlMeta
-    //msg := new(type.UrlMeta)
-    if err = c.Bind(&urlMetaList); err != nil {
-        return
+		var urlMetaList []types.UrlMeta
+		//msg := new(type.UrlMeta)
+        if err := c.Bind(&urlMetaList); err != nil {
+		    //return
+            c.String(http.StatusInternalServerError , "error json format")
+
+		}
+		fmt.Println(urlMetaList)
+		r, err := task.AddURLMetaTasks(urlMetaList, amqpQueue)
+        fmt.Println(r)
+		if err == nil {
+
+            //atask := &types.Task{ID: uuid.New().String(), Type:"SPIDER", Meta: "{\"url\":\"http://google.com\"}"}
+	        //body, err := json.Marshal(atask)
+            //amqpQueue.Publish(body)
+		    //publish to queue
+		}else {
+		}
+		return c.String(http.StatusOK, "recive url from "+name+"!")
     }
-    fmt.Println(urlMetaList)
-    //r, err := database.DBConn.AddURLTask(url string)
-    //insertID, err := msg.Save()
-    //if err != nil {
-    //    c.Echo().Logger.Error("Insert Error", err)
-    //}
-    //return c.JSON(http.StatusOK, map[string]int64{"result_id": insertID, })
-	return c.String(http.StatusOK, "recive url from "+name+"!")
-
 }
+
+
+//func AddUrl(c echo.Context) (err error) {
+//}

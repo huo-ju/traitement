@@ -1,5 +1,4 @@
 package rabbitmq
-
 import (
     "fmt"
     //"os"
@@ -28,7 +27,11 @@ func (q *Queue) Close() {
 }
 
 // Consume wrapping the mailman.created queue consume 
-func (q *Queue) Consume() (<-chan amqp.Delivery, error) {
+func (q *Queue) Consume(qoscount int) (<-chan amqp.Delivery, error) {
+    err := q.AmqpChannel.Qos(qoscount, 0, false)
+    if err != nil {
+        return nil, err
+    }
     return q.AmqpChannel.Consume("mailman."+q.Name+".created", "",false, false, false,false, nil)
 }
 
