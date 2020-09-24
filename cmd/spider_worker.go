@@ -10,6 +10,7 @@ import (
 	"github.com/gocolly/colly/v2"
 	"git.a.jhuo.ca/huoju/traitement/pkg/rabbitmq"
 	"git.a.jhuo.ca/huoju/traitement/pkg/types"
+	"git.a.jhuo.ca/huoju/traitement/pkg/storage"
 )
 
 
@@ -80,6 +81,19 @@ func main() {
 				c.OnResponse(func(r *colly.Response) {
 					fmt.Println(string(r.Body))
 					fmt.Println("response code: ", r.StatusCode)
+
+                    if r.StatusCode == 200 {
+                        bucket := &storage.FileBucket{"/home/huoju/crawling"}
+                        fileinfo, err := bucket.Save(string(r.Body), atask.ID)
+                        fmt.Println(fileinfo)
+                        if err!=nil {
+                            //retry
+                        } else {
+                            amqpQueue.Succ(&d)
+                            fmt.Println("save succ", fileinfo)
+                        }
+
+                    }
                     //TODO: 200 extract and save file, send ack to the queue
 				})
 
