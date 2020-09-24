@@ -25,6 +25,8 @@ var (
 type SpiderTask struct {
     Url string
 	GatherLink bool
+    Uniq bool
+    SavePage bool
 }
 
 
