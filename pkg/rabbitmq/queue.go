@@ -83,6 +83,11 @@ func  (q *Queue) Retry(d *amqp.Delivery) {
     }
 }
 
+//Succ send ack to the message queue
+func  (q *Queue) Succ(d *amqp.Delivery) {
+    d.Ack(false)
+}
+
 // Publish send task to the queue
 func  (q *Queue) Publish(body []byte) error {
 	return q.AmqpChannel.Publish("nanit."+q.Name, "created", false, false, amqp.Publishing{

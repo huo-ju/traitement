@@ -7,6 +7,7 @@ import (
 	"path/filepath"
     "encoding/json"
 	"github.com/spf13/viper"
+	"github.com/gocolly/colly/v2"
 	"git.a.jhuo.ca/huoju/traitement/pkg/rabbitmq"
 	"git.a.jhuo.ca/huoju/traitement/pkg/types"
 )
@@ -23,6 +24,7 @@ var (
 
 type SpiderTask struct {
     Url string
+	GatherLink bool
 }
 
 
@@ -60,8 +62,35 @@ func main() {
                 ataskmeta := &SpiderTask{}
                 err = json.Unmarshal([]byte(atask.Meta), ataskmeta)
                 log.Printf("Message Meta: %s", ataskmeta )
+                log.Printf("Message Url: %s", ataskmeta.Url )
+
+				c := colly.NewCollector(
+					colly.UserAgent("Mozilla/5.0 (compatible; traitementBot; http://opentraitement.org)"),
+				)
+				c.OnHTML("a[href]", func(e *colly.HTMLElement) {
+                    if ataskmeta.GatherLink == true{ //TOOD: gather links and sent to the api
+						link := e.Attr("href")
+						// Print link
+						fmt.Printf("Link found: %q -> %s\n", e.Text, link)
+					}
+				})
+
+				c.OnResponse(func(r *colly.Response) {
+					fmt.Println(string(r.Body))
+					fmt.Println("response code: ", r.StatusCode)
+                    //TODO: 200 extract and save file, send ack to the queue
+				})
+
+				// Before making a request print "Visiting ..."
+				c.OnRequest(func(r *colly.Request) {
+					fmt.Println("Visiting", r.URL.String())
+				})
+
+				// Start scraping on https://hackerspaces.org
+				c.Visit(ataskmeta.Url)
             }
-            amqpQueue.Retry(&d)
+            //amqpQueue.Succ(&d)
+            //amqpQueue.Retry(&d)
         }
     }()
 
