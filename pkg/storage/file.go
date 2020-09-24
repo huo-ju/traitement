@@ -14,7 +14,7 @@ type FileBucket struct {
     RootPath string
 }
 
-
+//Save save string into a file
 func (bucket *FileBucket) Save(content string, filename string) (string, error) {
     now := time.Now()
     subPath := now.Format("2006-02-01")
