@@ -5,6 +5,7 @@ import (
     "io"
     "os"
     "time"
+    "strings"
 	"git.a.jhuo.ca/huoju/traitement/pkg/types"
     "fmt"
 )
@@ -34,7 +35,7 @@ func (bucket *FileBucket) Save(pagecontent *types.PageContent, filename string) 
         return filepath,err
     }
     defer file.Close()
-    content := fmt.Sprintf("Title:%s\nAuthor:%s\nPublishTime:%s\nContent:%s", pagecontent.Title, pagecontent.Author, pagecontent.PublishTime, pagecontent.Content)
+    content := fmt.Sprintf("Url:%s\nTitle:%s\nAuthor:%s\nPublishTime:%s\nContent:%s", pagecontent.Url, strings.TrimSpace(pagecontent.Title), strings.TrimSpace(pagecontent.Author), pagecontent.PublishTime, strings.TrimSpace(pagecontent.Content))
     _, err = io.WriteString(file, content)
     if err != nil {
         return filepath,err
