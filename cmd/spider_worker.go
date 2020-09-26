@@ -4,6 +4,7 @@ import (
 	"flag"
     "fmt"
     "log"
+    "time"
 	"path/filepath"
     "encoding/json"
 	"github.com/spf13/viper"
@@ -24,6 +25,7 @@ var (
     maxRetries int
     webapiendpoint string
     webtoken string
+    sleeptime int
 )
 
 type SpiderTask struct {
@@ -48,6 +50,7 @@ func loadconf() {
     queueQos = viper.GetInt("QUEUE_QOS")
     webapiendpoint = viper.GetString("WEBAPI")
     webtoken = viper.GetString("JWT_TOKEN")
+    sleeptime= viper.GetInt("SLEEP")
 }
 
 func main() {
@@ -62,6 +65,8 @@ func main() {
     stopChan := make(chan bool)
     go func(){
         for d := range messageChannel {
+            fmt.Println("sleep...")
+            time.Sleep(time.Duration(sleeptime) * time.Millisecond)
             atask := &types.Task{}
             err := json.Unmarshal(d.Body, atask)
             log.Println(err)
@@ -88,9 +93,7 @@ func main() {
 	            })
 
 				c.OnResponse(func(r *colly.Response) {
-					fmt.Println(string(r.Body))
 					fmt.Println("response code: ", r.StatusCode)
-
                     if r.StatusCode == 200 {
                         succ := true
                         if ataskmeta.SavePage == true {
