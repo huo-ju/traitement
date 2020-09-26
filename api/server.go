@@ -22,9 +22,10 @@ func AddUrl(amqpQueue *rabbitmq.Queue) echo.HandlerFunc {
 
 		c.Echo().Logger.Info("api save by user ", name)
 
-
 		var urlMetaList []types.UrlMeta
 		//msg := new(type.UrlMeta)
+        //fmt.Println("===============")
+        //fmt.Println(urlMetaList)
         if err := c.Bind(&urlMetaList); err != nil {
 		    //return
             c.String(http.StatusInternalServerError , "error json format")
@@ -34,17 +35,12 @@ func AddUrl(amqpQueue *rabbitmq.Queue) echo.HandlerFunc {
 		r, err := task.AddURLMetaTasks(urlMetaList, amqpQueue)
         fmt.Println(r)
 		if err == nil {
-
             //atask := &types.Task{ID: uuid.New().String(), Type:"SPIDER", Meta: "{\"url\":\"http://google.com\"}"}
 	        //body, err := json.Marshal(atask)
             //amqpQueue.Publish(body)
 		    //publish to queue
 		}else {
 		}
-		return c.String(http.StatusOK, "recive url from "+name+"!")
+		return c.String(http.StatusOK, "urls recived.")
     }
 }
-
-
-//func AddUrl(c echo.Context) (err error) {
-//}

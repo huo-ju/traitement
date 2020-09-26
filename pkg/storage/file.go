@@ -5,7 +5,8 @@ import (
     "io"
     "os"
     "time"
-    //"fmt"
+	"git.a.jhuo.ca/huoju/traitement/pkg/types"
+    "fmt"
 )
 
 
@@ -14,10 +15,11 @@ type FileBucket struct {
     RootPath string
 }
 
+
 //Save save string into a file
-func (bucket *FileBucket) Save(content string, filename string) (string, error) {
+func (bucket *FileBucket) Save(pagecontent *types.PageContent, filename string) (string, error) {
     now := time.Now()
-    subPath := now.Format("2006-02-01")
+    subPath := now.Format("2006-01-02")
     path := filepath.Join(bucket.RootPath, subPath)
     filepath := filepath.Join(bucket.RootPath, subPath, filename)
 
@@ -32,7 +34,7 @@ func (bucket *FileBucket) Save(content string, filename string) (string, error) 
         return filepath,err
     }
     defer file.Close()
-
+    content := fmt.Sprintf("Title:%s\nAuthor:%s\nPublishTime:%s\nContent:%s", pagecontent.Title, pagecontent.Author, pagecontent.PublishTime, pagecontent.Content)
     _, err = io.WriteString(file, content)
     if err != nil {
         return filepath,err

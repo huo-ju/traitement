@@ -1,10 +1,10 @@
 package types
 
-import (
-)
-
 type UrlMeta struct {
-    Url string
+    Url string `json:"Url"`
+    GatherLink bool `json:"GatherLink"`
+    Uniq bool `json:"Uniq"`
+    SavePage bool `json:"SavePage"`
 }
 
 type Task struct {
