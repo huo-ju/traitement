@@ -22,6 +22,7 @@ var (
     baseRetryDelay int
     maxRetries int
     jwtSecret   string
+	denyDomains map[string]int
 )
 
 var amqpQueue *rabbitmq.Queue
@@ -31,16 +32,34 @@ func loadconf() {
 	viper.AddConfigPath(filepath.Dir("."))
 	viper.SetConfigName("config")
 	viper.SetConfigType("toml")
-	viper.ReadInConfig()
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(fmt.Errorf("Fatal error parsing config file: %s \n", err))
+	}
+
 	pgURL = viper.GetString("PG_URL")
 	amqpURL = viper.GetString("AMQP_URL")
 	jwtSecret = viper.GetString("JWT_SECRET")
 	queueName = viper.GetString("QUEUE_NAME")
 	baseRetryDelay = viper.GetInt("BASE_RETRY_DELAY")
 	maxRetries = viper.GetInt("MAX_RETRIES")
+
+	viper.SetConfigName("domain")
+	viper.SetConfigType("yaml")
+	err = viper.ReadInConfig()
+	if err != nil {
+		panic(fmt.Errorf("Fatal error parsing config file: %s \n", err))
+	}
+    denyDomains = make(map[string]int)
+
+    domains := viper.GetStringSlice("deny")
+    for _,domain := range domains{
+        denyDomains[domain]=1
+    }
 }
 
 func StartServer(jwtSecret string ) {
+    api.DenyDomains = denyDomains
 	e := echo.New()
     e.Use(middleware.Logger())
     e.Logger.SetLevel(log.DEBUG)
