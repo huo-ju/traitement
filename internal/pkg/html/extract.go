@@ -5,7 +5,7 @@ import (
     "strings"
     "net/url"
     "github.com/antchfx/htmlquery"
-	"github.com/gloomyzerg/textractor"
+	"github.com/virushuo/textractor"
 	"git.a.jhuo.ca/huoju/traitement/pkg/types"
 )
 
@@ -45,6 +45,13 @@ func FindLink(siteprefix string, html string) []types.UrlMeta {
 }
 
 func FindContent(url string, html string) (*types.PageContent, error ){
+    var err error
+    defer func() {
+        if r := recover(); r != nil {
+            err = r.(error)
+        }
+    }()
+
     r, err := textractor.Extract(html)
     if err == nil {
         pagecontent := &types.PageContent{url, r.Title, r.Author, r.PublishTime , r.Content}

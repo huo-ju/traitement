@@ -3,7 +3,6 @@ package task
 import (
     "fmt"
     "log"
-    "errors"
     "encoding/json"
     "net/url"
     "github.com/google/uuid"
@@ -17,15 +16,17 @@ func AddURLMetaTasks(urlmetalist []types.UrlMeta, denydomains *map[string]int, a
         fmt.Println(urlmeta.Url)
         u, err := url.Parse(urlmeta.Url)
         if err !=nil{
-            return "",err
+            fmt.Println("Parse url error, skip.", urlmeta.Url)
+            continue
         }
 
         if (*denydomains)[u.Host]==1{
-            return "", errors.New("domain in the denylist, skip.")
+            fmt.Println("domain in the denylist, skip.", urlmeta.Url)
+            continue
         }
-
-        //TODO: add url deny list
         key,err := database.DBConn.AddURLTask(urlmeta.Url)
+        //fmt.Println(err)
+        //fmt.Println(err.Code)
         if err  == nil {
             log.Printf("AddURLMetaTask: %s %s", key, urlmeta.Url)
             buff, err := json.Marshal(urlmeta)
