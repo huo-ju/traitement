@@ -56,8 +56,9 @@ func loadconf() {
 func main() {
 	flag.Parse()
 	loadconf()
-    queueName := "spider"
+    fmt.Println(amqpURL)
     amqpQueue, err := rabbitmq.Init(amqpURL, queueName, baseRetryDelay, maxRetries)
+    fmt.Println(err)
     messageChannel, err := amqpQueue.Consume(2)
     defer amqpQueue.Close()
     fmt.Println(err)

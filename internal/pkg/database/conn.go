@@ -22,6 +22,7 @@ func New(connstr string) (*Db, error) {
 	poolConfig.MaxConns = 6
 	db.pool, err = pgxpool.ConnectConfig(context.Background(), poolConfig)
     for err!=nil {
+        fmt.Println(err)
         fmt.Println("wait 5 Second for reconnect db")
         time.Sleep(5 * time.Second)
 	    db.pool, err = pgxpool.ConnectConfig(context.Background(), poolConfig)

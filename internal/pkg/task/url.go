@@ -13,7 +13,7 @@ import (
 
 func AddURLMetaTasks(urlmetalist []types.UrlMeta, denydomains *map[string]int, amqpQueue *rabbitmq.Queue) (string, error) {
     for _, urlmeta := range urlmetalist{
-        fmt.Println(urlmeta.Url)
+        fmt.Println("addurl: ",urlmeta.Url)
         u, err := url.Parse(urlmeta.Url)
         if err !=nil{
             fmt.Println("Parse url error, skip.", urlmeta.Url)
@@ -24,22 +24,30 @@ func AddURLMetaTasks(urlmetalist []types.UrlMeta, denydomains *map[string]int, a
             fmt.Println("domain in the denylist, skip.", urlmeta.Url)
             continue
         }
-        key,err := database.DBConn.AddURLTask(urlmeta.Url)
-        //fmt.Println(err)
-        //fmt.Println(err.Code)
-        if err  == nil {
-            log.Printf("AddURLMetaTask: %s %s", key, urlmeta.Url)
-            buff, err := json.Marshal(urlmeta)
-            if err == nil {
-                metastr := string(buff)
-                atask := &types.Task{ID: uuid.New().String(), Type:"SPIDER", Meta: metastr}
-	            body, err := json.Marshal(atask)
-                if err == nil {
-                    amqpQueue.Publish(body)
-                }
-            }else {
-                fmt.Println("json format error", err)
+        if urlmeta.Uniq == true {
+            key, err := database.DBConn.AddURLTask(urlmeta.Url)
+            if err != nil {
+                fmt.Println("insert url to db error")
+                fmt.Println(err)
+                continue
             }
+            log.Printf("AddURLMetaTask To Db: %s %s", key, urlmeta.Url)
+        }
+        buff, err := json.Marshal(urlmeta)
+        if err == nil {
+            metastr := string(buff)
+            atask := &types.Task{ID: uuid.New().String(), Type:"SPIDER", Meta: metastr}
+	        body, err := json.Marshal(atask)
+            if err == nil {
+                log.Printf("Add URL Task To queue:", urlmeta.Url)
+                err := amqpQueue.Publish(body)
+                if err!=nil{
+                    fmt.Println("publish err:")
+                    fmt.Println(err)
+                }
+            }
+        }else {
+            fmt.Println("json format error", err)
         }
     }
     return "",nil
