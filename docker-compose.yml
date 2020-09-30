@@ -1,0 +1,85 @@
+version: "3.7"
+services:
+  traefik:
+  image: "traefik"
+  container_name: "traefik"
+  command:
+    #- "--log.level=DEBUG"
+    #- "--api.insecure=true"
+    - "--providers.docker=true"
+    - "--providers.docker.exposedbydefault=false"
+    - "--entrypoints.web.address=:80"
+    - "--entrypoints.web-secure.address=:443"
+    - "--entrypoints.rabbitmq.address=:5672"
+    - "--certificatesresolvers.le.acme.tlschallenge=true"
+    - "--certificatesResolvers.le.acme.httpChallenge=true"
+    - "--certificatesresolvers.le.acme.email=info@briko.org"
+    - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+  ports:
+    - "443:443"
+    - "80:80"
+    - "5672:5672"
+    #- "8080:8080"
+  volumes:
+    - "./letsencrypt:/letsencrypt"
+    - "/var/run/docker.sock:/var/run/docker.sock:ro"
+  logging:
+    options:
+      max-size: 10m
+
+  traitementdb:
+    image: postgres
+    restart: always
+    volumes:
+      - "./postgresql:/var/lib/postgresql/data"
+    ports:
+      - "5432:5432"
+    environment:
+        POSTGRES_PASSWORD: 
+    logging:
+      options:
+        max-size: 10m
+
+
+
+  rabbitmq:
+    image: 'rabbitmq:3.8-management-alpine'
+    ports:
+      # HTTP management UI
+      - '127.0.0.1:15672:15672'
+    volumes:
+      - ./rabbitmq/data:/var/lib/rabbitmq
+      - ./rabbitmq/logs:/var/log/rabbitmq
+      - ./rabbitmq/tls:/tmp/tls
+
+    environment:
+      AMQP_URL: "amqp://rabbitmq?connection_attempts=5&retry_delay=5"
+      RABBITMQ_DEFAULT_USER: ""
+      RABBITMQ_DEFAULT_PASS: ""
+    labels:
+      - "traefik.enable=true"
+      - "traefik.tcp.routers.ingress.rule=HostSNI(`amqp.briko.org`)"
+      - "traefik.tcp.routers.ingress.entrypoints=rabbitmq"
+      - "traefik.tcp.routers.ingress.tls=true"
+      - "traefik.tcp.routers.ingress.tls.certresolver=le"
+      - "traefik.tcp.services.ingress.loadbalancer.server.port=5672"
+  traitement:
+    image: "dh.press.one/pressone/traitementsrv"
+    volumes:
+      - "./configs:/dist/configs"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traitement-web-secure.entrypoints=web-secure"
+      - "traefik.http.routers.traitement-web-secure.rule=Host(`tasks.briko.org`)"
+      - "traefik.http.routers.traitement-web-secure.tls=true"
+      - "traefik.http.routers.traitement-web-secure.tls.certresolver=le"
+      - "traefik.http.services.traitement-web-secure.loadbalancer.server.port=1323"
+      - "traefik.http.middlewares.traitement-redirect-web-secure.redirectscheme.scheme=https"
+      - "traefik.http.routers.traitement-web.middlewares=traitement-redirect-web-secure"
+      - "traefik.http.routers.traitement-web.rule=Host(`tasks.briko.org`)"
+      - "traefik.http.routers.traitement-web.entrypoints=web"
+    depends_on:
+      - traitementdb
+    links:
+      - traitementdb
+
