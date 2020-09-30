@@ -37,7 +37,7 @@ func FindLink(siteprefix string, html string) []types.UrlMeta {
 
         }
         if len(link)>0{
-            urlmeta_list[idx] = types.UrlMeta{Url:link, GatherLink:false, Uniq:true, SavePage:true}
+            urlmeta_list[idx] = types.UrlMeta{Url:strings.TrimSpace(link), GatherLink:false, Uniq:true, SavePage:true}
             idx++
         }
     }
