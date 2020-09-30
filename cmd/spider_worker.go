@@ -19,13 +19,14 @@ import (
 var (
 	pgURL string
     amqpURL string
-    //queueName string
+    queueName string
     queueQos int
     baseRetryDelay int
     maxRetries int
     webapiendpoint string
     webtoken string
     sleeptime int
+    fileStoragePath string
 )
 
 type SpiderTask struct {
@@ -44,7 +45,8 @@ func loadconf() {
 	viper.ReadInConfig()
 	pgURL = viper.GetString("PG_URL")
 	amqpURL = viper.GetString("AMQP_URL")
-	//queueName = viper.GetString("QUEUE_NAME")
+    fileStoragePath = viper.GetString("FILE_STORAGE")
+	queueName = viper.GetString("QUEUE_NAME")
 	baseRetryDelay = viper.GetInt("BASE_RETRY_DELAY")
 	maxRetries = viper.GetInt("MAX_RETRIES")
     queueQos = viper.GetInt("QUEUE_QOS")
@@ -98,7 +100,7 @@ func main() {
                     if r.StatusCode == 200 {
                         succ := true
                         if ataskmeta.SavePage == true {
-                            bucket := &storage.FileBucket{"/home/huoju/crawling"}
+                            bucket := &storage.FileBucket{fileStoragePath}
 
                             pagecontent,err := html.FindContent(r.Request.URL.String(), string(r.Body))
                             fileinfo, err := bucket.Save(pagecontent, atask.ID)

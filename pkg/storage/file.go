@@ -32,7 +32,7 @@ func (bucket *FileBucket) Save(pagecontent *types.PageContent, filename string) 
 
     file, err := os.Create(filepath)
     if err != nil {
-        return filepath,err
+        return filepath, err
     }
     defer file.Close()
     content := fmt.Sprintf("Url:%s\nTitle:%s\nAuthor:%s\nPublishTime:%s\nContent:%s", pagecontent.Url, strings.TrimSpace(pagecontent.Title), strings.TrimSpace(pagecontent.Author), pagecontent.PublishTime, strings.TrimSpace(pagecontent.Content))
