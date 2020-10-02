@@ -9,6 +9,7 @@ import (
     "encoding/json"
 	"github.com/spf13/viper"
 	"github.com/gocolly/colly/v2"
+    "github.com/streadway/amqp"
 	"git.a.jhuo.ca/huoju/traitement/pkg/rabbitmq"
 	"git.a.jhuo.ca/huoju/traitement/pkg/types"
     "git.a.jhuo.ca/huoju/traitement/internal/pkg/html"
@@ -55,17 +56,45 @@ func loadconf() {
     sleeptime= viper.GetInt("SLEEP")
 }
 
+func amqpQueueConnect(connectstr string, name string, baseRetryDelay int, maxRetries int, chAmqpErr chan *amqp.Error) (*rabbitmq.Queue){
+
+    amqpQueue, err := rabbitmq.Init(amqpURL, queueName, baseRetryDelay, maxRetries, chAmqpErr)
+    for err != nil {
+        fmt.Println(err)
+        fmt.Println("wait 5 Second for reconnect amqp")
+        time.Sleep(5 * time.Second)
+        amqpQueue, err = rabbitmq.Init(amqpURL, queueName, baseRetryDelay, maxRetries, chAmqpErr)
+    }
+    fmt.Println("amqp connected")
+    return amqpQueue
+}
+
+
+func readAmqpErrorChannel(c chan *amqp.Error, amqpQueue *rabbitmq.Queue) {
+	//for {
+		input := <-c
+        fmt.Println("readAmqpErrorChannel closing:%s", input)
+        fmt.Println(amqpQueue)
+        amqpQueue.Reconn(amqpURL)
+    //}
+}
+
 func main() {
 	flag.Parse()
 	loadconf()
-    fmt.Println(amqpURL)
-    amqpQueue, err := rabbitmq.Init(amqpURL, queueName, baseRetryDelay, maxRetries)
-    fmt.Println(err)
+
+	var chAmqpErr chan *amqp.Error = make(chan *amqp.Error)
+
+
+    amqpQueue := amqpQueueConnect(amqpURL, queueName, baseRetryDelay, maxRetries, chAmqpErr)
     messageChannel, err := amqpQueue.Consume(2)
     defer amqpQueue.Close()
+
+	go readAmqpErrorChannel(chAmqpErr, amqpQueue)
+
+    //amqpQueue := amqpQueueConnect(amqpURL, queueName, baseRetryDelay, maxRetries)
     fmt.Println(err)
     //handleError(err, "Can't register consumer")
-    stopChan := make(chan bool)
     go func(){
         for d := range messageChannel {
             fmt.Println("sleep...")
@@ -146,6 +175,7 @@ func main() {
         }
     }()
 
+    stopChan := make(chan bool)
     <-stopChan
 }
 

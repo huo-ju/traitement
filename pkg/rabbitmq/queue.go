@@ -6,7 +6,7 @@ import (
 	//"flag"
     //"encoding/json"
     //"math/rand"
-    //"time"
+    "time"
     //"log"
     "github.com/streadway/amqp"
 )
@@ -18,6 +18,7 @@ type Queue struct {
     Name string
     BaseRetryDelay int
     MaxRetries int
+    ErrChannel chan *amqp.Error
 }
 
 // Close the channel and connection
@@ -97,8 +98,79 @@ func  (q *Queue) Publish(body []byte) error {
 	})
 }
 
+func (q *Queue) Declare(name string)(error) {
+    err := q.AmqpChannel.ExchangeDeclare("nanit."+name , "direct", true, false, false, false, nil); //"nanit.users"
+    if err !=nil {
+        return err
+    }
+	_, err = q.AmqpChannel.QueueDeclare("mailman."+name+".created", true, false, false, false, nil)
+    if err !=nil {
+        return err
+    }
+	_, err = q.AmqpChannel.QueueDeclare("mailman."+name+".rejected", true, false, false, false, nil)
+    if err !=nil {
+        return err
+    }
+    err = q.AmqpChannel.ExchangeDeclare("nanit."+name+".retry1", "direct", true, false, false, false, nil);
+    if err !=nil {
+        return err
+    }
+    err = q.AmqpChannel.ExchangeDeclare("nanit."+name+".retry2", "direct", true, false, false, false, nil);
+    if err !=nil {
+        return err
+    }
+    waitqargs := make(amqp.Table)
+    waitqargs["x-dead-letter-exchange"] = "nanit."+name+".retry2"
+	_, err = q.AmqpChannel.QueueDeclare("nanit."+name+".wait_queue", true, false, false, false, waitqargs)
+    if err !=nil {
+        return err
+    }
+    err = q.AmqpChannel.QueueBind("mailman."+name+".created", "created","nanit."+name,false , nil);
+    if err !=nil {
+        return err
+    }
+    err = q.AmqpChannel.QueueBind("nanit."+name+".wait_queue", "mailman."+name+".created", "nanit."+name+".retry1",false , nil);
+    if err !=nil {
+        return err
+    }
+    err = q.AmqpChannel.QueueBind("mailman."+name+".created", "mailman."+name+".created", "nanit."+name+".retry2",false , nil);
+    if err !=nil {
+        return err
+    }
+    return nil
+}
+
+func (q *Queue) Reconn(connectstr string) {
+    conn, err := amqp.Dial(connectstr)
+    for err != nil {
+        fmt.Println(err)
+        fmt.Println("wait 5 Second for dial amqp")
+        time.Sleep(5 * time.Second)
+        conn, err = amqp.Dial(connectstr)
+    }
+    q.Conn = conn
+
+    //if err !=nil {
+    //    return nil, err
+    //}
+	//defer conn.Close()
+
+	amqpChannel, errch := conn.Channel()
+    for errch != nil {
+        fmt.Println(err)
+        fmt.Println("wait 5 Second for connect amqp channel")
+        time.Sleep(5 * time.Second)
+	    amqpChannel, errch = conn.Channel()
+    }
+    q.AmqpChannel = amqpChannel
+    q.AmqpChannel.NotifyClose(q.ErrChannel)
+    //if err !=nil {
+    //    return nil, err
+    //}
+}
+
 // Init the Queue and return a Queue instance
-func Init (connectstr string, name string, baseRetryDelay int, maxRetries int) (*Queue, error)  {
+func Init (connectstr string, name string, baseRetryDelay int, maxRetries int, chAmqpErr chan *amqp.Error) (*Queue, error)  {
     conn, err := amqp.Dial(connectstr)
     if err !=nil {
         return nil, err
@@ -111,44 +183,8 @@ func Init (connectstr string, name string, baseRetryDelay int, maxRetries int) (
     }
 	//defer amqpChannel.Close()
 
-    err = amqpChannel.ExchangeDeclare("nanit."+name , "direct", true, false, false, false, nil); //"nanit.users"
-    if err !=nil {
-        return nil, err
-    }
-	_, err = amqpChannel.QueueDeclare("mailman."+name+".created", true, false, false, false, nil)
-    if err !=nil {
-        return nil, err
-    }
-	_, err = amqpChannel.QueueDeclare("mailman."+name+".rejected", true, false, false, false, nil)
-    if err !=nil {
-        return nil, err
-    }
-    err = amqpChannel.ExchangeDeclare("nanit."+name+".retry1", "direct", true, false, false, false, nil);
-    if err !=nil {
-        return nil, err
-    }
-    err = amqpChannel.ExchangeDeclare("nanit."+name+".retry2", "direct", true, false, false, false, nil);
-    if err !=nil {
-        return nil, err
-    }
-    waitqargs := make(amqp.Table)
-    waitqargs["x-dead-letter-exchange"] = "nanit."+name+".retry2"
-	_, err = amqpChannel.QueueDeclare("nanit."+name+".wait_queue", true, false, false, false, waitqargs)
-    if err !=nil {
-        return nil, err
-    }
-    err = amqpChannel.QueueBind("mailman."+name+".created", "created","nanit."+name,false , nil);
-    if err !=nil {
-        return nil, err
-    }
-    err = amqpChannel.QueueBind("nanit."+name+".wait_queue", "mailman."+name+".created", "nanit."+name+".retry1",false , nil);
-    if err !=nil {
-        return nil, err
-    }
-    err = amqpChannel.QueueBind("mailman."+name+".created", "mailman."+name+".created", "nanit."+name+".retry2",false , nil);
-    if err !=nil {
-        return nil, err
-    }
-    queue := &Queue{AmqpChannel: amqpChannel, Conn:conn, Name: name, BaseRetryDelay: baseRetryDelay, MaxRetries: maxRetries}
-    return queue, nil
+    queue := &Queue{AmqpChannel: amqpChannel, Conn:conn, Name: name, BaseRetryDelay: baseRetryDelay, MaxRetries: maxRetries, ErrChannel: chAmqpErr}
+    err = queue.Declare(name)
+    queue.AmqpChannel.NotifyClose(chAmqpErr)
+    return queue, err
 }

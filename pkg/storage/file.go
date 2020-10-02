@@ -36,6 +36,7 @@ func (bucket *FileBucket) Save(pagecontent *types.PageContent, filename string) 
     }
     defer file.Close()
     content := fmt.Sprintf("Url:%s\nTitle:%s\nAuthor:%s\nPublishTime:%s\nContent:%s", pagecontent.Url, strings.TrimSpace(pagecontent.Title), strings.TrimSpace(pagecontent.Author), pagecontent.PublishTime, strings.TrimSpace(pagecontent.Content))
+    fmt.Println(content)
     _, err = io.WriteString(file, content)
     if err != nil {
         return filepath,err
