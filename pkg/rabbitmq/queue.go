@@ -92,8 +92,6 @@ func  (q *Queue) Succ(d *amqp.Delivery) {
 
 // Publish send task to the queue
 func  (q *Queue) Publish(body []byte) error {
-    fmt.Println("===publich:")
-    fmt.Println(q)
 	return q.AmqpChannel.Publish("nanit."+q.Name, "created", false, false, amqp.Publishing{
 		DeliveryMode: amqp.Persistent,
 		ContentType:  "text/plain",

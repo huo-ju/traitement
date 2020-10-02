@@ -24,15 +24,6 @@ func AddURLMetaTasks(urlmetalist []types.UrlMeta, denydomains *map[string]int, a
             fmt.Println("domain in the denylist, skip.", urlmeta.Url)
             continue
         }
-        if urlmeta.Uniq == true {
-            key, err := database.DBConn.AddURLTask(urlmeta.Url)
-            if err != nil {
-                fmt.Println("insert url to db error")
-                fmt.Println(err)
-                continue
-            }
-            log.Printf("AddURLMetaTask To Db: %s %s", key, urlmeta.Url)
-        }
         buff, err := json.Marshal(urlmeta)
         if err == nil {
             metastr := string(buff)
@@ -44,6 +35,16 @@ func AddURLMetaTasks(urlmetalist []types.UrlMeta, denydomains *map[string]int, a
                 if err!=nil{
                     fmt.Println("publish err:")
                     fmt.Println(err)
+                }else {
+                    if urlmeta.Uniq == true {
+                        key, err := database.DBConn.AddURLTask(urlmeta.Url)
+                        if err != nil {
+                            fmt.Println("insert url to db error")
+                            fmt.Println(err)
+                            continue
+                        }
+                        log.Printf("AddURLMetaTask To Db: %s %s", key, urlmeta.Url)
+                    }
                 }
             }
         }else {

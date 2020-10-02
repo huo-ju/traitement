@@ -21,7 +21,6 @@ func FindLink(siteprefix string, html string) []types.UrlMeta {
     idx := 0
     for _ , n := range list{
         href := htmlquery.SelectAttr(n, "href")
-        //fmt.Println(href) // output @href value
         var link string
         if strings.HasPrefix(href, "/") { //link without domain
             if len(href) >= minpathlen {
