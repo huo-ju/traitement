@@ -10,6 +10,7 @@ require (
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gocolly/colly/v2 v2.1.0
 	github.com/google/uuid v1.1.2
+	github.com/isayme/go-amqp-reconnect v0.0.0-20180930040740-e71660afb5ca
 	github.com/jackc/pgx/v4 v4.8.1
 	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/labstack/echo/v4 v4.1.17

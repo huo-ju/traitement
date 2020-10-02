@@ -30,6 +30,8 @@ var (
     fileStoragePath string
 )
 
+var QueueMessageChannel <-chan amqp.Delivery
+
 type SpiderTask struct {
     Url string
 	GatherLink bool
@@ -69,35 +71,12 @@ func amqpQueueConnect(connectstr string, name string, baseRetryDelay int, maxRet
     return amqpQueue
 }
 
-
 func readAmqpErrorChannel(c chan *amqp.Error, amqpQueue *rabbitmq.Queue) {
-	//for {
-		input := <-c
-        fmt.Println("readAmqpErrorChannel closing:%s", input)
-        fmt.Println(amqpQueue)
-        amqpQueue.Reconn(amqpURL)
-    //}
+    input := <-c
+    fmt.Println("readAmqpErrorChannel closing:%s", input)
 }
 
-func main() {
-	flag.Parse()
-	loadconf()
-
-	var chAmqpErr chan *amqp.Error = make(chan *amqp.Error)
-
-
-    amqpQueue := amqpQueueConnect(amqpURL, queueName, baseRetryDelay, maxRetries, chAmqpErr)
-    messageChannel, err := amqpQueue.Consume(2)
-    defer amqpQueue.Close()
-
-	go readAmqpErrorChannel(chAmqpErr, amqpQueue)
-
-    //amqpQueue := amqpQueueConnect(amqpURL, queueName, baseRetryDelay, maxRetries)
-    fmt.Println(err)
-    //handleError(err, "Can't register consumer")
-    go func(){
-        for d := range messageChannel {
-            fmt.Println("sleep...")
+func processTask(d amqp.Delivery, amqpQueue *rabbitmq.Queue){
             time.Sleep(time.Duration(sleeptime) * time.Millisecond)
             atask := &types.Task{}
             err := json.Unmarshal(d.Body, atask)
@@ -112,13 +91,6 @@ func main() {
 				c := colly.NewCollector(
 					colly.UserAgent("Mozilla/5.0 (compatible; traitementBot; http://opentraitement.org)"),
 				)
-				//c.OnHTML("a[href]", func(e *colly.HTMLElement) {
-                //    if ataskmeta.GatherLink == true{ //TOOD: gather links and sent to the api
-				//		link := e.Attr("href")
-				//		// Print link
-				//		fmt.Printf("Link found: %q -> %s\n", e.Text, link)
-				//	}
-				//})
                 c.OnError(func(r *colly.Response, err error) {
 		            fmt.Println("Request URL:", r.Request.URL, "failed with response:", r, "\nError:", err)
                     amqpQueue.Retry(&d)
@@ -171,10 +143,31 @@ func main() {
 				// Start scraping on https://hackerspaces.org
 				c.Visit(ataskmeta.Url)
             }
-            //amqpQueue.Succ(&d)
-        }
-    }()
+}
 
+func main() {
+	flag.Parse()
+	loadconf()
+
+
+	var chAmqpErr chan *amqp.Error = make(chan *amqp.Error)
+    var err error
+
+    amqpQueue := amqpQueueConnect(amqpURL, queueName, baseRetryDelay, maxRetries, chAmqpErr)
+    QueueMessageChannel, err = amqpQueue.Consume(2)
+    if err!= nil{
+    fmt.Println("can't register Consume err")
+    }
+    defer amqpQueue.Close()
+
+	go readAmqpErrorChannel(chAmqpErr, amqpQueue)
+    go func(){
+        for d := range QueueMessageChannel{
+            processTask(d, amqpQueue)
+        }
+        fmt.Println("routine channel closed, exit")
+        return
+    }()
     stopChan := make(chan bool)
     <-stopChan
 }

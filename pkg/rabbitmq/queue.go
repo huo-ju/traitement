@@ -6,15 +6,16 @@ import (
 	//"flag"
     //"encoding/json"
     //"math/rand"
-    "time"
+    //"time"
     //"log"
     "github.com/streadway/amqp"
+    rcrabbitmq "github.com/isayme/go-amqp-reconnect/rabbitmq"
 )
 
 // Queue wrapping the amqp Channel operation and manage the connection.
 type Queue struct {
-    AmqpChannel *amqp.Channel
-    Conn *amqp.Connection
+    AmqpChannel *rcrabbitmq.Channel
+    Conn *rcrabbitmq.Connection
     Name string
     BaseRetryDelay int
     MaxRetries int
@@ -91,6 +92,8 @@ func  (q *Queue) Succ(d *amqp.Delivery) {
 
 // Publish send task to the queue
 func  (q *Queue) Publish(body []byte) error {
+    fmt.Println("===publich:")
+    fmt.Println(q)
 	return q.AmqpChannel.Publish("nanit."+q.Name, "created", false, false, amqp.Publishing{
 		DeliveryMode: amqp.Persistent,
 		ContentType:  "text/plain",
@@ -140,38 +143,9 @@ func (q *Queue) Declare(name string)(error) {
     return nil
 }
 
-func (q *Queue) Reconn(connectstr string) {
-    conn, err := amqp.Dial(connectstr)
-    for err != nil {
-        fmt.Println(err)
-        fmt.Println("wait 5 Second for dial amqp")
-        time.Sleep(5 * time.Second)
-        conn, err = amqp.Dial(connectstr)
-    }
-    q.Conn = conn
-
-    //if err !=nil {
-    //    return nil, err
-    //}
-	//defer conn.Close()
-
-	amqpChannel, errch := conn.Channel()
-    for errch != nil {
-        fmt.Println(err)
-        fmt.Println("wait 5 Second for connect amqp channel")
-        time.Sleep(5 * time.Second)
-	    amqpChannel, errch = conn.Channel()
-    }
-    q.AmqpChannel = amqpChannel
-    q.AmqpChannel.NotifyClose(q.ErrChannel)
-    //if err !=nil {
-    //    return nil, err
-    //}
-}
-
 // Init the Queue and return a Queue instance
 func Init (connectstr string, name string, baseRetryDelay int, maxRetries int, chAmqpErr chan *amqp.Error) (*Queue, error)  {
-    conn, err := amqp.Dial(connectstr)
+    conn, err := rcrabbitmq.Dial(connectstr)
     if err !=nil {
         return nil, err
     }

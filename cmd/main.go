@@ -3,11 +3,13 @@ package main
 import (
 	"flag"
     "fmt"
+    "time"
     "github.com/labstack/gommon/log"
 	"path/filepath"
 	"github.com/spf13/viper"
 	"github.com/labstack/echo/v4"
     "github.com/labstack/echo/v4/middleware"
+    "github.com/streadway/amqp"
 	"git.a.jhuo.ca/huoju/traitement/pkg/rabbitmq"
 	"git.a.jhuo.ca/huoju/traitement/api"
 	"git.a.jhuo.ca/huoju/traitement/internal/pkg/database"
@@ -69,6 +71,24 @@ func StartServer(jwtSecret string ) {
 	e.Logger.Fatal(e.Start(":1323"))
 }
 
+func amqpQueueConnect(connectstr string, name string, baseRetryDelay int, maxRetries int, chAmqpErr chan *amqp.Error) (*rabbitmq.Queue){
+
+    amqpQueue, err := rabbitmq.Init(amqpURL, queueName, baseRetryDelay, maxRetries, chAmqpErr)
+    for err != nil {
+        fmt.Println(err)
+        fmt.Println("wait 5 Second for reconnect amqp")
+        time.Sleep(5 * time.Second)
+        amqpQueue, err = rabbitmq.Init(amqpURL, queueName, baseRetryDelay, maxRetries, chAmqpErr)
+    }
+    fmt.Println("amqp connected")
+    return amqpQueue
+}
+
+func readAmqpErrorChannel(c chan *amqp.Error, amqpQueue *rabbitmq.Queue) {
+    input := <-c
+    fmt.Println("readAmqpErrorChannel closing:%s", input)
+}
+
 func main() {
 	flag.Parse()
 	loadconf()
@@ -79,17 +99,10 @@ func main() {
     fmt.Println(database.DBConn)
     fmt.Println("dbconn err:")
     fmt.Println(err)
-    amqpQueue, err = rabbitmq.Init(amqpURL, queueName, baseRetryDelay, maxRetries)
-    defer amqpQueue.Close()
-    //handleError(err, "Can't register consumer")
-    //stopChan := make(chan bool)
-    //go func(){
-    //    for d := range messageChannel {
-    //        log.Printf("Received a message: %s",d.Body)
-    //        amqpQueue.Retry(&d)
-    //    }
-    //}()
-    //<-stopChan
 
+	var chAmqpErr chan *amqp.Error = make(chan *amqp.Error)
+    amqpQueue = amqpQueueConnect(amqpURL, queueName, baseRetryDelay, maxRetries, chAmqpErr)
+	go readAmqpErrorChannel(chAmqpErr, amqpQueue)
+    defer amqpQueue.Close()
     StartServer(jwtSecret)
 }
