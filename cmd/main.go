@@ -92,13 +92,12 @@ func readAmqpErrorChannel(c chan *amqp.Error, amqpQueue *rabbitmq.Queue) {
 func main() {
 	flag.Parse()
 	loadconf()
-    fmt.Println(database.DBConn)
     var err error
 	database.DBConn, err = database.New(pgURL)
-    fmt.Println("dbconn:")
-    fmt.Println(database.DBConn)
-    fmt.Println("dbconn err:")
-    fmt.Println(err)
+    if err!=nil {
+        fmt.Println("dbconn err:")
+        fmt.Println(err)
+    }
 
 	var chAmqpErr chan *amqp.Error = make(chan *amqp.Error)
     amqpQueue = amqpQueueConnect(amqpURL, queueName, baseRetryDelay, maxRetries, chAmqpErr)
