@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/gocolly/colly/v2"
     "github.com/streadway/amqp"
+    rcrabbitmq "github.com/virushuo/go-amqp-reconnect/rabbitmq"
 	"git.a.jhuo.ca/huoju/traitement/pkg/rabbitmq"
 	"git.a.jhuo.ca/huoju/traitement/pkg/types"
     "git.a.jhuo.ca/huoju/traitement/internal/pkg/html"
@@ -60,12 +61,13 @@ func loadconf() {
 
 func amqpQueueConnect(connectstr string, name string, baseRetryDelay int, maxRetries int, chAmqpErr chan *amqp.Error) (*rabbitmq.Queue){
 
-    amqpQueue, err := rabbitmq.Init(amqpURL, queueName, baseRetryDelay, maxRetries, chAmqpErr)
+    amqpconfig := &rcrabbitmq.Config{Qos:queueQos}
+    amqpQueue, err := rabbitmq.Init(amqpURL, queueName, baseRetryDelay, maxRetries, amqpconfig, chAmqpErr)
     for err != nil {
         fmt.Println(err)
         fmt.Println("wait 5 Second for reconnect amqp")
         time.Sleep(5 * time.Second)
-        amqpQueue, err = rabbitmq.Init(amqpURL, queueName, baseRetryDelay, maxRetries, chAmqpErr)
+        amqpQueue, err = rabbitmq.Init(amqpURL, queueName, baseRetryDelay, maxRetries, amqpconfig,chAmqpErr)
     }
     fmt.Println("amqp connected")
     return amqpQueue

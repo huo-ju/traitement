@@ -9,7 +9,7 @@ import (
     //"time"
     //"log"
     "github.com/streadway/amqp"
-    rcrabbitmq "github.com/isayme/go-amqp-reconnect/rabbitmq"
+    rcrabbitmq "github.com/virushuo/go-amqp-reconnect/rabbitmq"
 )
 
 // Queue wrapping the amqp Channel operation and manage the connection.
@@ -30,10 +30,10 @@ func (q *Queue) Close() {
 
 // Consume wrapping the mailman.created queue consume 
 func (q *Queue) Consume(qoscount int) (<-chan amqp.Delivery, error) {
-    err := q.AmqpChannel.Qos(qoscount, 0, false)
-    if err != nil {
-        return nil, err
-    }
+    //err := q.AmqpChannel.Qos(qoscount, 0, false)
+    //if err != nil {
+    //    return nil, err
+    //}
     return q.AmqpChannel.Consume("mailman."+q.Name+".created", "",false, false, false,false, nil)
 }
 
@@ -142,8 +142,8 @@ func (q *Queue) Declare(name string)(error) {
 }
 
 // Init the Queue and return a Queue instance
-func Init (connectstr string, name string, baseRetryDelay int, maxRetries int, chAmqpErr chan *amqp.Error) (*Queue, error)  {
-    conn, err := rcrabbitmq.Dial(connectstr)
+func Init (connectstr string, name string, baseRetryDelay int, maxRetries int, config *rcrabbitmq.Config, chAmqpErr chan *amqp.Error) (*Queue, error)  {
+    conn, err := rcrabbitmq.Dial(connectstr, config)
     if err !=nil {
         return nil, err
     }
