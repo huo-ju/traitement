@@ -22,7 +22,7 @@ func (webapi *WebApi) SaveUrls(data *[]types.UrlMeta) (error) {
     fmt.Println(err)
     fmt.Println(string(output))
     var httpclient = &http.Client{
-        Timeout: time.Second * 5,
+        Timeout: time.Second * 60,
     }
     var bearer = "Bearer " + webapi.Token
     apiendpoint := webapi.Endpoint + "/addurl"
