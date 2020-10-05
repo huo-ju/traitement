@@ -13,6 +13,7 @@ require (
 	github.com/jackc/pgx/v4 v4.8.1
 	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/labstack/echo/v4 v4.1.17
+	github.com/mafredri/cdp v0.29.2
 	github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca // indirect
 	github.com/spf13/viper v1.7.1 // indirect
 	github.com/streadway/amqp v1.0.0

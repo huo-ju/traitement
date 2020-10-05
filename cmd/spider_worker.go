@@ -14,6 +14,7 @@ import (
 	"git.a.jhuo.ca/huoju/traitement/pkg/rabbitmq"
 	"git.a.jhuo.ca/huoju/traitement/pkg/types"
     "git.a.jhuo.ca/huoju/traitement/internal/pkg/html"
+    "git.a.jhuo.ca/huoju/traitement/internal/pkg/scraping"
 	"git.a.jhuo.ca/huoju/traitement/pkg/storage"
 )
 
@@ -89,6 +90,12 @@ func processTask(d amqp.Delivery, amqpQueue *rabbitmq.Queue){
                 err = json.Unmarshal([]byte(atask.Meta), ataskmeta)
                 log.Printf("Message Meta: %s", ataskmeta )
                 log.Printf("Message Url: %s", ataskmeta.Url )
+                chromedevt := scraping.New("http://127.0.0.1:9222", 10 * time.Second)
+                resulthtml,err := chromedevt.Fetch(ataskmeta.Url)
+                fmt.Println("=============cdp result:")
+                fmt.Println(resulthtml)
+                fmt.Println(err)
+
 
 				c := colly.NewCollector(
 					colly.UserAgent("Mozilla/5.0 (compatible; traitementBot; http://opentraitement.org)"),
