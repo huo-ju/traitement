@@ -1,0 +1,24 @@
+version: "3.7"
+services:
+  chrome:
+    image: "zenika/alpine-chrome"
+    container_name: "chrome"
+    volumes:
+      - "./chrome.json:/etc/chrome.json"
+    command: [chromium-browser, "--security-opt seccomp=/etc/chrome.json", "--headless", "--disable-gpu", "--no-sandbox", "--remote-debugging-address=0.0.0.0", "--remote-debugging-port=9222"]
+    logging:
+      options:
+        max-size: 10m
+
+  traitementspider:
+    image: "dh.press.one/pressone/traitementspider"
+    volumes:
+      - "./configs_docker:/configs"
+      - "./crawling:/var/crawling"
+    depends_on:
+      - chrome
+    links:
+      - chrome
+    logging:
+      options:
+        max-size: 10m

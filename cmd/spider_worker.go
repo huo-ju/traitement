@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+    "os"
     "fmt"
     "log"
     "time"
@@ -46,11 +47,21 @@ type SpiderTask struct {
 
 
 func loadconf() {
-	viper.AddConfigPath(filepath.Dir("./configs/"))
-	viper.AddConfigPath(filepath.Dir("."))
+    fmt.Println("Reading Environment Variable")
+    var configspath string
+    configspath = os.Getenv("ConfigsPath")
+    if configspath == ""{
+        configspath = filepath.Dir("./configs/")
+    }
+    fmt.Printf("configspath: %s\n", configspath)
+
+	//viper.AddConfigPath(filepath.Dir(configspath))
+	viper.AddConfigPath(configspath)
 	viper.SetConfigName("worker_config")
 	viper.SetConfigType("toml")
-	viper.ReadInConfig()
+    err := viper.ReadInConfig()
+    fmt.Println("read in config")
+    fmt.Println(err)
 	pgURL = viper.GetString("PG_URL")
 	amqpURL = viper.GetString("AMQP_URL")
     fileStoragePath = viper.GetString("FILE_STORAGE")
@@ -201,6 +212,7 @@ func main() {
 	var chAmqpErr chan *amqp.Error = make(chan *amqp.Error)
     var err error
 
+    fmt.Println("amqpURL: ", amqpURL)
     amqpQueue := amqpQueueConnect(amqpURL, queueName, baseRetryDelay, maxRetries, chAmqpErr)
     QueueMessageChannel, err = amqpQueue.Consume(2)
     if err!= nil{
