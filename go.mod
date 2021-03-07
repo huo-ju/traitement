@@ -19,5 +19,5 @@ require (
 	github.com/streadway/amqp v1.0.0
 	github.com/temoto/robotstxt v1.1.1 // indirect
 	github.com/virushuo/go-amqp-reconnect v0.1.2
-	github.com/virushuo/textractor v0.2.1
+	github.com/virushuo/textractor v0.2.3
 )

@@ -31,20 +31,20 @@ func AddURLMetaTasks(urlmetalist []types.UrlMeta, denydomains *map[string]int, a
 	        body, err := json.Marshal(atask)
             if err == nil {
                 log.Printf("Add URL Task To queue:", urlmeta.Url)
-                err := amqpQueue.Publish(body)
+                if urlmeta.Uniq == true {
+                    key, err := database.DBConn.AddURLTask(urlmeta.Url)
+                    if err != nil {
+                        fmt.Println("insert url to db error")
+                        fmt.Println(err)
+                        continue
+                    }
+                    log.Printf("AddURLMetaTask To Db: %s %s", key, urlmeta.Url)
+                }
+
+                err = amqpQueue.Publish(body)
                 if err!=nil{
                     fmt.Println("publish err:")
                     fmt.Println(err)
-                }else {
-                    if urlmeta.Uniq == true {
-                        key, err := database.DBConn.AddURLTask(urlmeta.Url)
-                        if err != nil {
-                            fmt.Println("insert url to db error")
-                            fmt.Println(err)
-                            continue
-                        }
-                        log.Printf("AddURLMetaTask To Db: %s %s", key, urlmeta.Url)
-                    }
                 }
             }
         }else {

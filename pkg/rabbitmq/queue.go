@@ -1,13 +1,7 @@
 package rabbitmq
 import (
     "fmt"
-    //"os"
 	"strconv"
-	//"flag"
-    //"encoding/json"
-    //"math/rand"
-    //"time"
-    //"log"
     "github.com/streadway/amqp"
     rcrabbitmq "github.com/virushuo/go-amqp-reconnect/rabbitmq"
 )
@@ -30,10 +24,6 @@ func (q *Queue) Close() {
 
 // Consume wrapping the mailman.created queue consume 
 func (q *Queue) Consume(qoscount int) (<-chan amqp.Delivery, error) {
-    //err := q.AmqpChannel.Qos(qoscount, 0, false)
-    //if err != nil {
-    //    return nil, err
-    //}
     return q.AmqpChannel.Consume("mailman."+q.Name+".created", "",false, false, false,false, nil)
 }
 
